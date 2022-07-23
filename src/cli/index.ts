@@ -1,6 +1,7 @@
 import type { AvailablePackages } from "../installers/index.js";
 import chalk from "chalk";
 import { Command } from "commander";
+import fs from "fs-extra";
 import inquirer from "inquirer";
 import { CREATE_T3_APP, DEFAULT_APP_NAME } from "../consts.js";
 import { availablePackages } from "../installers/index.js";
@@ -105,6 +106,40 @@ export const runCli = async () => {
   // Explained below why this is in a try/catch block
   try {
     if (!cliResults.flags.default) {
+      if (fs.readdirSync("./").length > 0) {
+        console.log(
+          `${chalk.redBright.bold("Warning:")} Directory is not empty`,
+        );
+        const { proceed } = await inquirer.prompt<{
+          proceed: "abort" | "clear" | "continue";
+        }>({
+          name: "proceed",
+          type: "list",
+          message: "How would you like to proceed?",
+          choices: [
+            { name: "Abort installation", value: "abort", short: "Abort" },
+            {
+              name: "Clear the directory and continue installation",
+              value: "clear",
+              short: "Clear",
+            },
+            {
+              name: "Continue installation",
+              value: "Continue",
+              short: "Continue",
+            },
+          ],
+          default: "abort",
+        });
+        if (proceed === "abort") {
+          process.exit(0);
+        }
+        if (proceed === "clear") {
+          logger.info("Deleting contents in directory...");
+          fs.emptyDirSync("./");
+        }
+      }
+
       if (!cliProvidedName) {
         const { appName } = await inquirer.prompt<Pick<CliResults, "appName">>({
           name: "appName",
